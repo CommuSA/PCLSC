@@ -333,122 +333,125 @@ def main():
         IDS = "bob@mail.com"
         IDR = "alice@mail.com"
 
-        encrypt_tag_set = [None]*8
-
-        for i in range(8):
-            encrypt_tag_set[i] = 200+i
-
         puncture_tag_set = [None] * 10
 
         for i in range(10):
             puncture_tag_set[i] = i+10
 
         ex = 20
-        for i in range(ex):
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            MSK, PP = pclsc.Setup(10, 10, 4)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_Setup_total = round(mdict['RealTime'] + time_Setup_total, 4)
+        data = []
+        for j in range(5, 20):
+            encrypt_tag_set = [None] * j
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            sk_current_par_S = pclsc.PPKGen(PP, MSK, IDS)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_PPKGen_total = round(mdict['RealTime'] + time_PPKGen_total, 4)
+            for i in range(j):
+                encrypt_tag_set[i] = 200+i
+            for i in range(ex):
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                MSK, PP = pclsc.Setup(10, 10, 4)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_Setup_total = round(
+                    mdict['RealTime'] + time_Setup_total, 6)
 
-            sk_current_par_R = pclsc.PPKGen(PP, MSK, IDR)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                sk_current_par_S = pclsc.PPKGen(PP, MSK, IDS)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_PPKGen_total = round(
+                    mdict['RealTime'] + time_PPKGen_total, 6)
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            pk_S, sk_S = pclsc.FKGen(PP, sk_current_par_S)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_FKGen_total = round(mdict['RealTime'] + time_FKGen_total, 4)
+                sk_current_par_R = pclsc.PPKGen(PP, MSK, IDR)
 
-            pk_R, sk_R = pclsc.FKGen(PP, sk_current_par_R)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                pk_S, sk_S = pclsc.FKGen(PP, sk_current_par_S)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_FKGen_total = round(
+                    mdict['RealTime'] + time_FKGen_total, 6)
 
-            sk_current = sk_S['SK_fai']
-            a0 = sk_S['a0']
+                pk_R, sk_R = pclsc.FKGen(PP, sk_current_par_R)
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            ct, sigma, timestamp = pclsc.SignCrypt(
-                PP, encrypt_tag_set, 15, message, pk_S, sk_S, IDS)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_SignCrypt_total = round(
-                mdict['RealTime'] + time_SignCrypt_total, 4)
+                sk_current = sk_S['SK_fai']
+                a0 = sk_S['a0']
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            sk_current = pclsc.Update(PP, sk_current, 15)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_Update_total = round(mdict['RealTime'] + time_Update_total, 4)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                ct, sigma, timestamp = pclsc.SignCrypt(
+                    PP, encrypt_tag_set, 15, message, pk_S, sk_S, IDS)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_SignCrypt_total = round(
+                    mdict['RealTime'] + time_SignCrypt_total, 6)
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            for k in range(10):
-                sk_current = pclsc.Puncture(
-                    PP, sk_current, puncture_tag_set[k])
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_Puncture_total = round(
-                mdict['RealTime'] + time_Puncture_total, 4)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                sk_current = pclsc.Update(PP, sk_current, 15)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_Update_total = round(
+                    mdict['RealTime'] + time_Update_total, 6)
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            C0_dot = pclsc.OCDeCrypt(PP, ct, sk_current)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_OCDeCrypt_total = round(
-                mdict['RealTime'] + time_OCDeCrypt_total, 4)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                for k in range(10):
+                    sk_current = pclsc.Puncture(
+                        PP, sk_current, puncture_tag_set[k])
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_Puncture_total = round(
+                    mdict['RealTime'] + time_Puncture_total, 6)
 
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
-            orig_m = pclsc.Unsigncrypt(
-                PP, IDS, pk_S, ct, C0_dot, a0, sigma, timestamp)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_Unsigncrypt_total = round(
-                mdict['RealTime'] + time_Unsigncrypt_total, 4)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                C0_dot = pclsc.OCDeCrypt(PP, ct, sk_current)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_OCDeCrypt_total = round(
+                    mdict['RealTime'] + time_OCDeCrypt_total, 6)
 
-            print(message == orig_m)
+                groupObj.InitBenchmark()
+                groupObj.StartBenchmark(
+                    ['RealTime'])
+                orig_m = pclsc.Unsigncrypt(
+                    PP, IDS, pk_S, ct, C0_dot, a0, sigma, timestamp)
+                groupObj.EndBenchmark()
+                mdict = groupObj.GetGeneralBenchmarks()
+                time_Unsigncrypt_total = round(
+                    mdict['RealTime'] + time_Unsigncrypt_total, 6)
 
-        average_time_Setup = time_Setup_total / ex
-        average_time_PPKGen = time_PPKGen_total / ex
-        average_time_FKGen = time_FKGen_total / ex
-        average_time_SignCrypt = time_SignCrypt_total / ex
-        average_time_Update = time_Update_total / ex
-        average_time_Puncture = time_Puncture_total / ex
-        average_time_OCDeCrypt = time_OCDeCrypt_total / ex
-        average_time_Unsigncrypt = time_Unsigncrypt_total / ex
-        average_times[curve] = [curve, average_time_Setup, average_time_PPKGen, average_time_FKGen, average_time_SignCrypt,
+                print(message == orig_m)
+
+            average_time_Setup = time_Setup_total / ex
+            average_time_PPKGen = time_PPKGen_total / ex
+            average_time_FKGen = time_FKGen_total / ex
+            average_time_SignCrypt = time_SignCrypt_total / ex
+            average_time_Update = time_Update_total / ex
+            average_time_Puncture = time_Puncture_total / ex
+            average_time_OCDeCrypt = time_OCDeCrypt_total / ex
+            average_time_Unsigncrypt = time_Unsigncrypt_total / ex
+            average_times[j] = [j, average_time_Setup, average_time_PPKGen, average_time_FKGen, average_time_SignCrypt,
                                 average_time_Update, average_time_Puncture, average_time_OCDeCrypt, average_time_Unsigncrypt]
+            data.append(average_times[j])
+        data.insert(0,
+                    ["St_Tag_Num", "Setup", "PPKGen", "FKGen", "Signcryption",
+                     "Update", "Puncture", "OCDeCrypt", "Unsigncrypt"])
 
-    data = [
-        ["Curve", "Setup", "PPKGen", "FKGen", "Signcryption",
-         "Update", "Puncture", "OCDeCrypt", "Unsigncrypt"],
-        average_times["SS512"], average_times["BN254"], average_times["MNT201"], average_times["MNT224"]
-    ]
+        df = pd.DataFrame(data)
 
-    df = pd.DataFrame(data)
+        excel_file = curve + 'StTag_test_PCLSC.xlsx'
+        df.to_excel(excel_file, index=False, header=False)
 
-    excel_file = 'output_PCLSC.xlsx'
-    df.to_excel(excel_file, index=False, header=False)
-
-    print(f"Excel表格已保存到 {excel_file}")
+        print(f"Excel表格已保存到 {excel_file}")
 
 
 if __name__ == '__main__':
