@@ -4,7 +4,7 @@ import itertools
 from charm.toolbox.hash_module import Waters
 import math
 import datetime
-import pandas as pd
+# import pandas as pd
 
 debug = False
 
@@ -165,7 +165,6 @@ class PCLSC():
 # sk_tag --> skφ
 # sk_node_set --> sk0,η
 
-
     def SignCrypt(self, PP, tag_set, time_period, message, PK_IDS, SK_IDS, IDS):
         tag_number = len(tag_set)
         timestamp = datetime.datetime.now().timestamp()
@@ -225,11 +224,43 @@ class PCLSC():
         sk_tag[str(tag)] = {'1': PP['g2'] ** lamdai * PP['h'][0] ** ri, '2': PP['g'] ** ri, '3': tag,
                             '4': [((PP['h'][0] ** (-self.remainder(tag) ** i) * PP['h'][i]) ** ri) for i in range(1, PP['maximum_tag_number'])],
                             'counter': len(sk_current['sk_tag'])}
+        print(len(sk_current['sk_tag']))
+        sk_new = {'sk_tag': sk_tag, 'sk_node': sk_node_set,
+                  'time_period': sk_current['time_period']}
+        return sk_new
+    
+    def test_Puncture(self, PP, sk_current, tag):
+        ri, ri_dot, lamdai = group.random(
+            ZR), group.random(ZR), group.random(ZR)
+        sk_node_set = {}
+        for eta in bt[sk_current['time_period']]:
+            sk_node_set[eta] = {}
+            sk_node_set[eta]['0'] = sk_current['sk_node'][eta]['0'] * \
+                PP['g2'] ** (-lamdai) * PP['h'][0] ** ri_dot
+            sk_node_set[eta]['1'] = sk_current['sk_node'][eta]['1']
+            for j in range(len(eta) - 1, PP['tree_depth'] + 1):
+                sk_node_set[eta][str(j)] = sk_current['sk_node'][eta][str(j)]
+        sk_tag = {}
+        for item in sk_current['sk_tag']:
+            sk_tag[item] = sk_current['sk_tag'][item]
+        sk_tag[str(0)]['1'] *= PP['g'] ** ri_dot
+        sk_tag[str(0)]['4'] = [(sk_tag[str(0)]['4'][i-1] * (PP['h'][0] ** (-self.remainder(sk_tag[str(0)]
+                                                                                           ['3']) ** i) * PP['h'][i]) ** ri_dot) for i in range(1, PP['maximum_tag_number'])]
+        
+        r = len(sk_current['sk_tag'])
+        for k in range(len(tag)):
+            print(r)
+            sk_tag[str(tag[k])] = {'1': PP['g2'] ** lamdai * PP['h'][0] ** ri, '2': PP['g'] ** ri, '3': tag[k],
+                                '4': [((PP['h'][0] ** (-self.remainder(tag[k]) ** i) * PP['h'][i]) ** ri) for i in range(1, PP['maximum_tag_number'])],
+                                'counter': r}
+            r += 1
+        
+
         sk_new = {'sk_tag': sk_tag, 'sk_node': sk_node_set,
                   'time_period': sk_current['time_period']}
         return sk_new
 
-    def Update(self, PP, sk_current, next_time_period):
+    def Former_Update(self, PP, sk_current, next_time_period):
         prefix = tree.find(bt, sk_current['time_period'], next_time_period)
         sk_node_set = {}
         r_dot = group.random(ZR)
@@ -250,6 +281,63 @@ class PCLSC():
         sk_current['sk_node'] = sk_node_set
         sk_current['time_period'] = next_time_period
         return sk_current
+
+    def Update(self, PP, SK_ID, next_time_period, tag):
+        sk_current = SK_ID['SK_fai']
+        # sk_tag = sk_current['sk_tag']
+        sk_tag = {}
+        for item in sk_current['sk_tag']:
+            sk_tag[item] = sk_current['sk_tag'][item]
+        sk_node_set = {}
+        sk = SK_ID['sk']
+
+        prefix = tree.find(bt, sk_current['time_period'], next_time_period)
+        r_dot = group.random(ZR)
+        a_tao_pre = SK_ID['a0']
+        for eta in bt[next_time_period]:
+            a_tao = group.random(ZR)
+            # delta_eta = group.random(ZR)
+            temp = group.init(G2, 1)
+            for j in range(len(prefix[eta]) - 1, len(eta) - 1):
+                if eta[j + 1] == '1':
+                    temp *= sk_current['sk_node'][prefix[eta]][str(j)]
+            sk_node_set[eta] = {}
+
+            sk_node_set[eta]['0'] = sk_current['sk_node'][prefix[eta]
+                                                          ]['0'] * temp * (self.W(PP['v'], eta)) ** r_dot
+            sk_node_set[eta]['1'] = sk_current['sk_node'][prefix[eta]
+                                                          ]['1'] * PP['g'] ** r_dot
+            for j in range(len(eta) - 1, PP['tree_depth'] + 1):
+                sk_node_set[eta][str(j)] = sk_current['sk_node'][prefix[eta]][str(
+                    j)] * PP['v'][j] ** r_dot
+
+            sk_tag[str(0)]['1'] = sk_tag[str(0)]['1'] ** (a_tao_pre/a_tao)
+            sk_tag[str(0)]['2'] = sk_tag[str(0)]['2'] ** (a_tao_pre/a_tao)
+
+            sk_tag[str(0)]['4'] = [(sk_tag[str(0)]['4'][i-1] ** (a_tao_pre/a_tao))
+                                   for i in range(1, PP['maximum_tag_number'])]
+            
+            for k in range(len(tag)):
+                sk_tag[str(tag[k])]['1'] = sk_tag[str(
+                    tag[k])]['1'] ** (a_tao_pre/a_tao)
+                sk_tag[str(tag[k])]['2'] = sk_tag[str(
+                    tag[k])]['2'] ** (a_tao_pre/a_tao)
+                sk_tag[str(tag[k])]['3'] = tag[k]
+                sk_tag[str(tag[k])]['4'] = [sk_tag[str(tag[k])]['4'][i] ** (a_tao_pre/a_tao)
+                                            for i in range(PP['maximum_tag_number']-1)]
+
+            sk_node_set[eta]['0'] = sk_node_set[eta]['0'] ** (a_tao_pre/a_tao)
+            sk_node_set[eta]['1'] = sk_node_set[eta]['1'] ** (a_tao_pre/a_tao)
+            for j in range(len(eta) - 1, PP['tree_depth'] + 1):
+                sk_node_set[eta][str(j)] = sk_node_set[eta][str(
+                    j)] ** (a_tao_pre/a_tao)
+                
+            a_tao_pre = a_tao
+
+        SK_ID_new = {'a0': a_tao, 'SK_fai': {'sk_tag': sk_tag,
+                                             'sk_node': sk_node_set, 'time_period': next_time_period}, 'sk': sk}
+
+        return SK_ID_new
 
     def OCDeCrypt(self, PP, ct, sk_current):
         punc_number = len(sk_current['sk_tag'])
@@ -289,7 +377,9 @@ class PCLSC():
                     sk_current['sk_tag'][item]['2'], ct['c4'])) ** polynomial_value[sk_current['sk_tag'][item]['counter']] / pair(ct['c1'], sk_current['sk_tag'][item]['1'])
         C0_dot = 1
         for i in range(len(Z)):
+            print(i, Z[i],type(Z[i]))
             C0_dot *= Z[i]
+
         return C0_dot
 
    # def Unsigncrypt(self, PP, IDS, PK_IDS, SK_IDR, ct, C0_dot, sigma, time_period):
@@ -313,7 +403,9 @@ class PCLSC():
 
 
 def main():
-    curves = ["SS512", "BN254", "MNT201", "MNT224"]
+    # curves = ["SS512", "BN254", "MNT201", "MNT224"]
+    curves = ["SS512"]
+
     average_times = {}
     for curve in curves:
         groupObj = PairingGroup(curve)
@@ -343,7 +435,7 @@ def main():
         for i in range(10):
             puncture_tag_set[i] = i+10
 
-        ex = 20
+        ex = 1
         for i in range(ex):
             groupObj.InitBenchmark()
             groupObj.StartBenchmark(
@@ -373,9 +465,6 @@ def main():
 
             pk_R, sk_R = pclsc.FKGen(PP, sk_current_par_R)
 
-            sk_current = sk_S['SK_fai']
-            a0 = sk_S['a0']
-
             groupObj.InitBenchmark()
             groupObj.StartBenchmark(
                 ['RealTime'])
@@ -389,17 +478,11 @@ def main():
             groupObj.InitBenchmark()
             groupObj.StartBenchmark(
                 ['RealTime'])
-            sk_current = pclsc.Update(PP, sk_current, 15)
-            groupObj.EndBenchmark()
-            mdict = groupObj.GetGeneralBenchmarks()
-            time_Update_total = round(mdict['RealTime'] + time_Update_total, 4)
-
-            groupObj.InitBenchmark()
-            groupObj.StartBenchmark(
-                ['RealTime'])
             for k in range(10):
-                sk_current = pclsc.Puncture(
-                    PP, sk_current, puncture_tag_set[k])
+                sk_S['SK_fai'] = pclsc.Puncture(
+                    PP, sk_S['SK_fai'], puncture_tag_set[k])
+            # sk_S['SK_fai'] = pclsc.test_Puncture(
+            #         PP, sk_S['SK_fai'], puncture_tag_set)
             groupObj.EndBenchmark()
             mdict = groupObj.GetGeneralBenchmarks()
             time_Puncture_total = round(
@@ -408,7 +491,17 @@ def main():
             groupObj.InitBenchmark()
             groupObj.StartBenchmark(
                 ['RealTime'])
-            C0_dot = pclsc.OCDeCrypt(PP, ct, sk_current)
+            sk_S['SK_fai'] = pclsc.Former_Update(PP, sk_S['SK_fai'], 15)
+            # sk_S = pclsc.Update(PP, sk_S, 15, puncture_tag_set)
+
+            groupObj.EndBenchmark()
+            mdict = groupObj.GetGeneralBenchmarks()
+            time_Update_total = round(mdict['RealTime'] + time_Update_total, 4)
+
+            groupObj.InitBenchmark()
+            groupObj.StartBenchmark(
+                ['RealTime'])
+            C0_dot = pclsc.OCDeCrypt(PP, ct, sk_S['SK_fai'])
             groupObj.EndBenchmark()
             mdict = groupObj.GetGeneralBenchmarks()
             time_OCDeCrypt_total = round(
@@ -418,7 +511,7 @@ def main():
             groupObj.StartBenchmark(
                 ['RealTime'])
             orig_m = pclsc.Unsigncrypt(
-                PP, IDS, pk_S, ct, C0_dot, a0, sigma, timestamp)
+                PP, IDS, pk_S, ct, C0_dot, sk_S['a0'], sigma, timestamp)
             groupObj.EndBenchmark()
             mdict = groupObj.GetGeneralBenchmarks()
             time_Unsigncrypt_total = round(
@@ -438,17 +531,26 @@ def main():
                                 average_time_Update, average_time_Puncture, average_time_OCDeCrypt, average_time_Unsigncrypt]
 
     data = [
-        ["Curve", "Setup", "PPKGen", "FKGen", "Signcryption",
-         "Update", "Puncture", "OCDeCrypt", "Unsigncrypt"],
-        average_times["SS512"], average_times["BN254"], average_times["MNT201"], average_times["MNT224"]
+        ["Curve        ", "Setup         ", "PPKGen        ", "FKGen      ", "Signcryption    ",
+         "Update       ", "Puncture      ", "OCDeCrypt     ", "Unsigncrypt"],
+        average_times["SS512"]
     ]
+    for i in range(len(data[0])):
+            print(data[0][i], end="")
+    print("\n")
+    
+    for j in range(1,len(data)):
+        for i in range(len(data[0])):
+            print(data[j][i], end="        ")
+        print("\n")
 
-    df = pd.DataFrame(data)
 
-    excel_file = 'output_PCLSC.xlsx'
-    df.to_excel(excel_file, index=False, header=False)
+    # df = pd.DataFrame(data)
 
-    print(f"Excel表格已保存到 {excel_file}")
+    # excel_file = 'output_PCLSC.xlsx'
+    # df.to_excel(excel_file, index=False, header=False)
+
+    # print(f"Excel表格已保存到 {excel_file}")
 
 
 if __name__ == '__main__':

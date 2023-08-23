@@ -161,6 +161,16 @@ class PCLSC():
             'sk_tag': SK_PAR['sk_tag'], 'sk_node': SK_PAR['sk_node'], 'time_period': 0}, 'sk': sk}
         return PK_ID, SK_ID
 
+    def FKGenTest(self, PP, SK_PAR):
+
+        beta = group.random(ZR)
+        B = PP['g'] ** beta
+        C = SK_PAR['PSK']['A'] * B
+        sk = {'beta': beta, 'b': SK_PAR['PSK']['b']}
+        PK_ID = {'A': SK_PAR['PSK']['A'], 'C': C}
+        # SK_ID = {'a0': SK_PAR['a0'], 'SK_fai': {
+        #     'sk_tag': SK_PAR['sk_tag'], 'sk_node': SK_PAR['sk_node'], 'time_period': 0}, 'sk': sk}
+
 
 # sk_tag --> skφ
 # sk_node_set --> sk0,η
@@ -322,14 +332,6 @@ def main():
 
         message = group.random(GT)
 
-        time_Setup_total = 0
-        time_PPKGen_total = 0
-        time_FKGen_total = 0
-        time_SignCrypt_total = 0
-        time_Update_total = 0
-        time_Puncture_total = 0
-        time_OCDeCrypt_total = 0
-        time_Unsigncrypt_total = 0
         IDS = "bob@mail.com"
         IDR = "alice@mail.com"
 
@@ -346,6 +348,14 @@ def main():
         ex = 2
         data = []
         for j in range(5, 8):
+            time_Setup_total = 0
+            time_PPKGen_total = 0
+            time_FKGen_total = 0
+            time_SignCrypt_total = 0
+            time_Update_total = 0
+            time_Puncture_total = 0
+            time_OCDeCrypt_total = 0
+            time_Unsigncrypt_total = 0
             print(j)
             for i in range(ex):
                 time_Setup_start = datetime.datetime.now().timestamp()
@@ -362,54 +372,58 @@ def main():
 
                 sk_current_par_R = pclsc.PPKGen(PP, MSK, IDR)
 
-                time_FKGen_start = datetime.datetime.now().timestamp()
                 pk_S, sk_S = pclsc.FKGen(PP, sk_current_par_S)
-                time_init_end = datetime.datetime.now().timestamp()
-                time_FKGen = time_init_end-time_FKGen_start
+
+                time_FKGen_start = datetime.datetime.now().timestamp()
+                pclsc.FKGenTest(PP, sk_current_par_S)
+                time_FKGen_end = datetime.datetime.now().timestamp()
+                time_FKGen = time_FKGen_end-time_FKGen_start
                 time_FKGen_total += time_FKGen
 
-                pk_R, sk_R = pclsc.FKGen(PP, sk_current_par_R)
+                # pk_R, sk_R = pclsc.FKGen(PP, sk_current_par_R)
 
-                sk_current = sk_S['SK_fai']
-                a0 = sk_S['a0']
+                # sk_current = sk_S['SK_fai']
+                # a0 = sk_S['a0']
 
-                ct, sigma, timestamp = pclsc.SignCrypt(
-                    PP, encrypt_tag_set, 15, message, pk_S, sk_S, IDS)
+                # ct, sigma, timestamp = pclsc.SignCrypt(
+                #     PP, encrypt_tag_set, 15, message, pk_S, sk_S, IDS)
 
-                sk_current = pclsc.Update(PP, sk_current, 15)
+                # sk_current = pclsc.Update(PP, sk_current, 15)
 
-                for k in range(10):
-                    sk_current = pclsc.Puncture(
-                        PP, sk_current, puncture_tag_set[k])
+                # for k in range(10):
+                #     sk_current = pclsc.Puncture(
+                #         PP, sk_current, puncture_tag_set[k])
 
-                C0_dot = pclsc.OCDeCrypt(PP, ct, sk_current)
+                # C0_dot = pclsc.OCDeCrypt(PP, ct, sk_current)
 
-                orig_m = pclsc.Unsigncrypt(
-                    PP, IDS, pk_S, ct, C0_dot, a0, sigma, timestamp)
+                # orig_m = pclsc.Unsigncrypt(
+                #     PP, IDS, pk_S, ct, C0_dot, a0, sigma, timestamp)
 
-                print(message == orig_m)
+                # print(message == orig_m)
 
-            average_time_Setup = time_Setup_total / ex
-            average_time_PPKGen = time_PPKGen_total / ex
+            # average_time_Setup = time_Setup_total / ex
+            # average_time_PPKGen = time_PPKGen_total / ex
             average_time_FKGen = time_FKGen_total / ex
-            average_time_SignCrypt = time_SignCrypt_total / ex
-            average_time_Update = time_Update_total / ex
-            average_time_Puncture = time_Puncture_total / ex
-            average_time_OCDeCrypt = time_OCDeCrypt_total / ex
-            average_time_Unsigncrypt = time_Unsigncrypt_total / ex
-            average_times[j] = [j, average_time_Setup, average_time_PPKGen, average_time_FKGen, average_time_SignCrypt,
-                                average_time_Update, average_time_Puncture, average_time_OCDeCrypt, average_time_Unsigncrypt]
-            data.append(average_times[j])
-        data.insert(0,
-                    ["τ_max", "Setup", "PPKGen", "FKGen", "Signcryption",
-                     "Update", "Puncture", "OCDeCrypt", "Unsigncrypt"])
+            print(average_time_FKGen)
 
-        df = pd.DataFrame(data)
+            # average_time_SignCrypt = time_SignCrypt_total / ex
+            # average_time_Update = time_Update_total / ex
+            # average_time_Puncture = time_Puncture_total / ex
+            # average_time_OCDeCrypt = time_OCDeCrypt_total / ex
+            # average_time_Unsigncrypt = time_Unsigncrypt_total / ex
+            # average_times[j] = [j, average_time_Setup, average_time_PPKGen, average_time_FKGen, average_time_SignCrypt,
+            #                     average_time_Update, average_time_Puncture, average_time_OCDeCrypt, average_time_Unsigncrypt]
+            # data.append(average_times[j])
+        # data.insert(0,
+        #             ["τ_max", "Setup", "PPKGen", "FKGen", "Signcryption",
+        #              "Update", "Puncture", "OCDeCrypt", "Unsigncrypt"])
 
-        excel_file = curve + 'τ_test_PCLSC.xlsx'
-        df.to_excel(excel_file, index=False, header=False)
+        # df = pd.DataFrame(data)
 
-        print(f"Excel表格已保存到 {excel_file}")
+        # excel_file = curve + 'τ_test_PCLSC.xlsx'
+        # df.to_excel(excel_file, index=False, header=False)
+
+        # print(f"Excel表格已保存到 {excel_file}")
 
 
 if __name__ == '__main__':

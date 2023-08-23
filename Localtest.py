@@ -133,8 +133,8 @@ class LocalPclsc:
             # print(aes_key)
             aes = pyaes.AESModeOfOperationECB(aes_key)
             decrypted_data = aes.decrypt(ct_message)
-            original_data = unpad(decrypted_data, 16)
-            return original_data
+            # original_data = unpad(decrypted_data, 16)
+            return decrypted_data
 
         else:
             return None
@@ -143,9 +143,9 @@ class LocalPclsc:
         sk_new = pclsc.Puncture(PP, SKR_current, tag)
         return sk_new
 
-    def SkidUpdate(self, PP, sk_current, next_time_period):
-        sk_current = pclsc.Update(PP, sk_current, next_time_period)
-        return sk_current
+    def SkidUpdate(self, PP, SK_ID, next_time_period, tag):
+        SK_ID_new = pclsc.Update(PP, SK_ID, next_time_period, tag)
+        return SK_ID_new
 
     def PseudonymUpdate(self, PP, sk_TA, PID, RID):
         ui_dot = group.random(ZR)
@@ -222,7 +222,7 @@ def main():
         time_PU_total = 0
         time_Trace_total = 0
 
-        ex = 2
+        ex = 1
         for i in range(ex):
             ###### Initialization ######
             time_init_start = datetime.datetime.now().timestamp()
@@ -259,32 +259,35 @@ def main():
             #       time_Sign_end-time_Sign_start, " seconds")
             time_Sign = time_Sign_end-time_Sign_start
             time_Sign_total += time_Sign
-            sk_current = SK_IDS['SK_fai']
-
-            ####   Update  ####
-            time_Update_start = datetime.datetime.now().timestamp()
-            sk_current = locals.SkidUpdate(PP, sk_current, 15)
-            time_Update_end = datetime.datetime.now().timestamp()
-            # print("Update time: ",
-            #       time_Update_end-time_Update_start, " seconds")
-            time_Update = time_Update_end-time_Update_start
-            time_Update_total += time_Update
 
             ####  Puncture ####
             time_Puncture_start = datetime.datetime.now().timestamp()
             for k in range(10):
-                sk_current = locals.SKIdPuncture(
-                    PP, sk_current, puncture_tag_set[k])
+                SK_IDS['SK_fai'] = locals.SKIdPuncture(
+                    PP, SK_IDS['SK_fai'], puncture_tag_set[k])
             time_Puncture_end = datetime.datetime.now().timestamp()
             # print("Puncture time: ",
             #       time_Puncture_end-time_Puncture_start, " seconds")
             time_Puncture = time_Puncture_end-time_Puncture_start
             time_Puncture_total += time_Puncture
 
+            ####   Update  ####
+            time_Update_start = datetime.datetime.now().timestamp()
+            # SK_IDS['SK_fai'] = locals.SkidUpdate(PP, SK_IDS['SK_fai'], 15)
+            # sk_S['SK_fai'] = pclsc.Former_Update(PP, sk_S['SK_fai'], 15)
+
+            SK_IDS = locals.SkidUpdate(
+                PP, SK_IDS, 15, puncture_tag_set)
+            time_Update_end = datetime.datetime.now().timestamp()
+            # print("Update time: ",
+            #       time_Update_end-time_Update_start, " seconds")
+            time_Update = time_Update_end-time_Update_start
+            time_Update_total += time_Update
+
             #### Data Recovery ####
             time_Recovery_start = datetime.datetime.now().timestamp()
             original_data = locals.DataRecovery(
-                PIDS, ct_key, PK_IDS, sk_current, SK_IDS['a0'], sigma, ct_message, timestamp)
+                PIDS, ct_key, PK_IDS, SK_IDS['SK_fai'], SK_IDS['a0'], sigma, ct_message, timestamp)
             time_Recovery_end = datetime.datetime.now().timestamp()
             # print("DataRecovery time: ",
             #       time_Recovery_end-time_Recovery_start, " seconds", "Decrypted Data:", original_data)
@@ -323,7 +326,7 @@ def main():
         average_time_PU = time_PU_total / ex
         average_time_Trace = time_Trace / ex
         average_times[curve] = [curve, average_time_init, average_time_reg, average_time_KAndPC, average_time_Sign,
-                                average_time_Update, average_time_Puncture, average_time_Recovery, average_time_PU, average_time_Trace]
+                                average_time_Update,  average_time_PU, average_time_Puncture, average_time_Trace]
 
     data = [
         ["Curve", "Initialization", "Registration", "KG&PC", "Signcryption",
